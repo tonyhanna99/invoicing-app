@@ -14,7 +14,7 @@ const app = express()
 // Enable CORS for all origins in development, specific origin in production
 app.use(cors({
   origin: process.env.NODE_ENV === 'production' 
-    ? 'https://tetriastech.github.io' 
+    ? 'https://tetriastech.github.io/invoicing-app' 
     : 'http://localhost:5173',
   methods: ['GET', 'POST', 'OPTIONS'],
   allowedHeaders: ['Content-Type']
@@ -157,4 +157,4 @@ app.post('/generate', async (req, res) => {
 })
 
 const port = process.env.PORT || 4000
-app.listen(port, () => console.log(`Template server listening on http://localhost:${port}`))
+app.listen(port, '0.0.0.0', () => console.log(`Template server listening on port ${port}`))
