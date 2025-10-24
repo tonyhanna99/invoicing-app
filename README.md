@@ -66,7 +66,7 @@ npm run dev
    - Issue and Due Date
    - Amount
 
-2. Click "Generate PDF" to create the invoice
+2. Click "Generate Invoice" to create the invoice
 
 3. The generated PDF will automatically download, combining your customized first page with the standard remaining pages
 
