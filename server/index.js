@@ -32,8 +32,8 @@ app.use(cors({
 app.options('*', cors())
 app.use(express.json({ limit: '50mb' }))
 
-const TEMPLATE_PATH = path.join(__dirname, '..', 'Invoice Template.docx')
-const REMAINING_PAGES_PATH = path.join(__dirname, '..', 'Invoice.pdf')
+const TEMPLATE_PATH = path.join(__dirname, 'Invoice Template.docx')
+const REMAINING_PAGES_PATH = path.join(__dirname, 'Invoice.pdf')
 
 async function mergePDFs(firstPagePath, remainingPagesBuffer) {
   // Load both PDFs
