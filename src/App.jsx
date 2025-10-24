@@ -18,6 +18,7 @@ function incrementInvoiceNumber() {
 export default function App() {
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
+  const [address, setAddress] = useState('')
   const [invoiceNumber, setInvoiceNumber] = useState(() => getNextInvoiceNumber())
   const [message, setMessage] = useState('')
   const [issueDate, setIssueDate] = useState(() => new Date().toISOString().slice(0, 10))
@@ -47,6 +48,7 @@ export default function App() {
       const payload = {
         first_name: firstName,
         last_name: lastName,
+        address: address,
         invoice_number: String(invoiceNumber).padStart(5, '0'),
         issue_date: issueDate,
         due_date: dueDate,
@@ -129,6 +131,10 @@ export default function App() {
           <div className="form-row">
             <input placeholder="First name" value={firstName} onChange={(e) => setFirstName(e.target.value)} />
             <input placeholder="Last name" value={lastName} onChange={(e) => setLastName(e.target.value)} />
+          </div>
+
+          <div className="form-row">
+            <input placeholder="Address" value={address} onChange={(e) => setAddress(e.target.value)} />
           </div>
 
           <div className="form-row">
