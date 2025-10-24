@@ -35,6 +35,35 @@ app.use(express.json({ limit: '50mb' }))
 const TEMPLATE_PATH = path.join(__dirname, 'Invoice Template.docx')
 const REMAINING_PAGES_PATH = path.join(__dirname, 'Invoice.pdf')
 
+// Cache template and remaining pages in memory to avoid repeated file reads
+let templateCache = null
+let remainingPagesCache = null
+
+function loadTemplate() {
+  if (!templateCache) {
+    templateCache = fs.readFileSync(TEMPLATE_PATH)
+    console.log('Template loaded into cache')
+  }
+  return templateCache
+}
+
+function loadRemainingPages() {
+  if (!remainingPagesCache) {
+    remainingPagesCache = fs.readFileSync(REMAINING_PAGES_PATH)
+    console.log('Remaining pages loaded into cache')
+  }
+  return remainingPagesCache
+}
+
+// Health check endpoint to keep server warm
+app.get('/', (req, res) => {
+  res.json({ status: 'ok', message: 'Invoice generator server is running' })
+})
+
+app.get('/health', (req, res) => {
+  res.json({ status: 'healthy', uptime: process.uptime() })
+})
+
 async function mergePDFs(firstPagePath, remainingPagesBuffer) {
   // Load both PDFs
   const firstPagePdf = await PDFDocument.load(fs.readFileSync(firstPagePath))
@@ -63,16 +92,17 @@ function getSofficeCmd() {
 
 app.post('/generate', async (req, res) => {
   try {
-    const { first_name, last_name, invoice_number, issue_date, due_date, amount, payment_method } = req.body
+    const { first_name, last_name, address, invoice_number, issue_date, due_date, amount, payment_method } = req.body
 
-    // Read and fill the DOCX template
-    const content = fs.readFileSync(TEMPLATE_PATH)
+    // Use cached template instead of reading from disk every time
+    const content = loadTemplate()
     const zip = new PizZip(content)
     const doc = new Docxtemplater(zip, { paragraphLoop: true, linebreaks: true })
 
     const data = {
       first_name: first_name || '',
       last_name: last_name || '',
+      address: address || '',
       invoice_number: invoice_number || '',
       issue_date: issue_date || '',
       due_date: due_date || '',
@@ -116,9 +146,9 @@ app.post('/generate', async (req, res) => {
       }
 
       try {
-        // Read both PDFs and merge them
+        // Use cached remaining pages instead of reading from disk every time
         const firstPagePdf = await PDFDocument.load(fs.readFileSync(firstPagePath))
-        const remainingPagesPdf = await PDFDocument.load(fs.readFileSync(REMAINING_PAGES_PATH))
+        const remainingPagesPdf = await PDFDocument.load(loadRemainingPages())
         
         // Create a new PDF document
         const mergedPdf = await PDFDocument.create()
@@ -156,4 +186,13 @@ const port = process.env.PORT || 10000
 
 app.listen(port, '0.0.0.0', () => {
   console.log(`Server is running on port ${port}`)
+  
+  // Preload template and remaining pages into memory on startup
+  try {
+    loadTemplate()
+    loadRemainingPages()
+    console.log('Templates preloaded successfully')
+  } catch (err) {
+    console.error('Failed to preload templates:', err)
+  }
 })

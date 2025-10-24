@@ -25,6 +25,7 @@ export default function App() {
   const [dueDate, setDueDate] = useState(() => new Date().toISOString().slice(0, 10))
   const [amount, setAmount] = useState('395')
   const [isLoading, setIsLoading] = useState(false)
+  const [loadingStep, setLoadingStep] = useState('')
 
   useEffect(() => {
     setInvoiceNumber(getNextInvoiceNumber())
@@ -42,7 +43,8 @@ export default function App() {
       return
     }
     setIsLoading(true)
-    setMessage('Generating PDF...')
+    setLoadingStep('Connecting to server...')
+    setMessage('')
 
     try {
       const payload = {
@@ -56,7 +58,9 @@ export default function App() {
         payment_method: 'Transfer'
       }
 
-  const resp = await fetch('https://invoicing-app-rdoz.onrender.com/generate', {
+      setLoadingStep('Preparing invoice...')
+      
+      const resp = await fetch('https://invoicing-app-rdoz.onrender.com/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
@@ -67,7 +71,9 @@ export default function App() {
         throw new Error(err.error || 'Server conversion failed')
       }
 
+      setLoadingStep('Converting to PDF...')
       const blob = await resp.blob()
+      setLoadingStep('Finalizing document...')
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
@@ -81,10 +87,12 @@ export default function App() {
       setInvoiceNumber(getNextInvoiceNumber())
       setMessage(`Saved invoice-${String(invoiceNumber).padStart(5, '0')}.pdf`)
       setIsLoading(false)
+      setLoadingStep('')
       return
     } catch (err) {
       console.warn('Server conversion failed, falling back to simple client PDF:', err)
-      setMessage('Server conversion failed, falling back to simple client PDF')
+      setLoadingStep('Server error, creating backup PDF...')
+      setMessage('')
       // Fallback: programmatic PDF via jsPDF (simple but preserves data)
       const pdf = new jsPDF()
       const left = 20
@@ -108,6 +116,7 @@ export default function App() {
       setInvoiceNumber(getNextInvoiceNumber())
       setMessage(`Saved ${filename}`)
       setIsLoading(false)
+      setLoadingStep('')
       return
     }
   }
@@ -158,11 +167,16 @@ export default function App() {
           <div className="form-row" style={{justifyContent:'flex-end'}}>
             <button className="btn" type="submit" disabled={isLoading}>
               {isLoading ? (
-                <span style={{display:'flex',alignItems:'center',gap:8}}>
-                  <svg className="spinner" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                    <circle cx="12" cy="12" r="10" strokeWidth="3" strokeLinecap="round" strokeDasharray="31.4 31.4" />
-                  </svg>
-                  Generating...
+                <span style={{display:'flex',alignItems:'center',flexDirection:'column',gap:4}}>
+                  <span style={{display:'flex',alignItems:'center',gap:8}}>
+                    <svg className="spinner" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                      <circle cx="12" cy="12" r="10" strokeWidth="3" strokeLinecap="round" strokeDasharray="31.4 31.4" />
+                    </svg>
+                    Generating...
+                  </span>
+                  {loadingStep && (
+                    <span style={{fontSize:'0.85em',opacity:0.9}}>{loadingStep}</span>
+                  )}
                 </span>
               ) : (
                 'Generate Invoice'
