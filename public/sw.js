@@ -1,10 +1,11 @@
 const CACHE_NAME = 'invoicing-pwa-v1';
 const FILES_TO_CACHE = [
-  '/',
-  '/index.html',
-  '/manifest.json',
-  '/icon-192.png',
-  '/icon-512.png'
+  '/invoicing-app/',
+  '/invoicing-app/index.html',
+  '/invoicing-app/manifest.json',
+  '/invoicing-app/icon-192.png',
+  '/invoicing-app/icon-512.png',
+  '/invoicing-app/TrinityLogo.png'
 ];
 
 self.addEventListener('install', (evt) => {
