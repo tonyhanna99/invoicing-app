@@ -52,7 +52,7 @@ export default function App() {
         payment_method: 'Transfer'
       }
 
-      const resp = await fetch('https://invoicing-app-8m4i.onrender.com/generate', {
+  const resp = await fetch('https://invoicing-app-rdoz.onrender.com/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
@@ -177,9 +177,6 @@ export default function App() {
           </div>
         )}
       </div>
-      <p style={{textAlign:'center',color:'var(--text-muted)',marginTop:16,fontSize:'0.9rem'}}>
-        Add to Home Screen to install as a PWA
-      </p>
     </div>
   )
 }
