@@ -156,9 +156,8 @@ app.post('/generate', async (req, res) => {
   }
 })
 
-const port = process.env.PORT || 4000
-const host = '0.0.0.0'
-app.listen(port, host, () => {
-  console.log(`Server is running on http://${host}:${port}`)
-  console.log('Press Ctrl + C to stop the server')
+const port = process.env.PORT || 10000
+
+app.listen(port, '0.0.0.0', () => {
+  console.log(`Server is running on port ${port}`)
 })
