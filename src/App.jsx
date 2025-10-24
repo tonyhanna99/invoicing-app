@@ -153,7 +153,7 @@ export default function App() {
 
           <div className="form-row" style={{justifyContent:'flex-end'}}>
             <div style={{display:'flex',gap:8}}>
-              <button className="btn" type="submit">Generate PDF</button>
+              <button className="btn" type="submit">Generate Invoice</button>
               <button type="button" className="btn secondary" onClick={handleResetCounter}>Reset Counter</button>
             </div>
           </div>
