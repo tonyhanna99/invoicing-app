@@ -23,6 +23,7 @@ export default function App() {
   const [issueDate, setIssueDate] = useState(() => new Date().toISOString().slice(0, 10))
   const [dueDate, setDueDate] = useState(() => new Date().toISOString().slice(0, 10))
   const [amount, setAmount] = useState('395')
+  const [isLoading, setIsLoading] = useState(false)
 
   useEffect(() => {
     setInvoiceNumber(getNextInvoiceNumber())
@@ -39,6 +40,7 @@ export default function App() {
       setMessage('Enter customer first or last name')
       return
     }
+    setIsLoading(true)
     setMessage('Generating PDF...')
 
     try {
@@ -76,6 +78,7 @@ export default function App() {
       incrementInvoiceNumber()
       setInvoiceNumber(getNextInvoiceNumber())
       setMessage(`Saved invoice-${String(invoiceNumber).padStart(5, '0')}.pdf`)
+      setIsLoading(false)
       return
     } catch (err) {
       console.warn('Server conversion failed, falling back to simple client PDF:', err)
@@ -102,14 +105,9 @@ export default function App() {
       incrementInvoiceNumber()
       setInvoiceNumber(getNextInvoiceNumber())
       setMessage(`Saved ${filename}`)
+      setIsLoading(false)
       return
     }
-  }
-
-  const handleResetCounter = () => {
-    localStorage.setItem(COUNTER_KEY, '0')
-    setInvoiceNumber(getNextInvoiceNumber())
-    setMessage('Counter reset')
   }
 
   return (
@@ -134,46 +132,45 @@ export default function App() {
           </div>
 
           <div className="form-row">
-            <label style={{display:'flex',gap:8,alignItems:'center'}}>
+            <label className="date-label">
               Issue Date
               <input type="date" value={issueDate} onChange={(e) => setIssueDate(e.target.value)} />
             </label>
-            <label style={{display:'flex',gap:8,alignItems:'center'}}>
+            <label className="date-label">
               Due Date
               <input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
             </label>
           </div>
 
           <div className="form-row">
-            <label style={{display:'flex',gap:8,alignItems:'center'}}>
+            <label className="amount-label">
               Amount
               <input type="text" value={amount} onChange={(e) => setAmount(e.target.value)} />
             </label>
           </div>
 
           <div className="form-row" style={{justifyContent:'flex-end'}}>
-            <div style={{display:'flex',gap:8}}>
-              <button className="btn" type="submit">Generate Invoice</button>
-              <button type="button" className="btn secondary" onClick={handleResetCounter}>Reset Counter</button>
-            </div>
+            <button className="btn" type="submit" disabled={isLoading}>
+              {isLoading ? (
+                <span style={{display:'flex',alignItems:'center',gap:8}}>
+                  <svg className="spinner" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <circle cx="12" cy="12" r="10" strokeWidth="3" strokeLinecap="round" strokeDasharray="31.4 31.4" />
+                  </svg>
+                  Generating...
+                </span>
+              ) : (
+                'Generate Invoice'
+              )}
+            </button>
           </div>
         </form>
 
         {message && (
-          <div style={{
-            marginTop: 20,
-            padding: 12,
-            borderRadius: 8,
-            background: '#f0f9eb',
-            color: '#67c23a',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 8
-          }}>
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+          <div className="message-box">
+            <svg width="22" height="22" viewBox="0 0 20 20" fill="currentColor">
               <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clipRule="evenodd" />
             </svg>
-            {message}
+            <span>{message}</span>
           </div>
         )}
       </div>
