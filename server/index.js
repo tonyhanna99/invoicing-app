@@ -11,8 +11,14 @@ const { PDFDocument } = require('pdf-lib')
 
 const app = express()
 
-// Enable CORS for the frontend origin
-// Enable CORS for local development: allow any http://localhost:<port>
+// Enable CORS for all origins in development, specific origin in production
+app.use(cors({
+  origin: process.env.NODE_ENV === 'production' 
+    ? 'https://tetriastech.github.io' 
+    : 'http://localhost:5173',
+  methods: ['GET', 'POST', 'OPTIONS'],
+  allowedHeaders: ['Content-Type']
+}))
 // This accepts requests with no origin (e.g. curl or native apps) or from localhost dev ports.
 app.use(cors({
   origin: function (origin, callback) {
