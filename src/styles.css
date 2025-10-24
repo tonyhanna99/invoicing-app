@@ -294,19 +294,17 @@ input[type="text"] {
     gap: 12px;
     margin-bottom: 16px;
     width: 100%;
-    overflow: hidden;
   }
   
   .app { 
-    padding: 16px 12px; 
+    padding: 16px 8px; 
     justify-content: flex-start;
     padding-top: 24px;
   }
   
   .card { 
-    padding: 20px; 
+    padding: 16px; 
     border-radius: 16px;
-    overflow: hidden;
     box-sizing: border-box;
   }
   
@@ -347,11 +345,18 @@ input[type="text"] {
   }
   
   input[type="date"] {
-    font-size: 0.9rem;
-    padding: 12px 14px;
-    /* Ensure date inputs don't overflow */
-    max-width: 100%;
-    overflow: hidden;
+    font-size: 0.8rem;
+    padding: 10px 6px;
+    /* Make date inputs more compact on mobile */
+    width: 100%;
+    box-sizing: border-box;
+    text-align: center;
+  }
+  
+  /* Additional mobile-specific date input styling */
+  input[type="date"]::-webkit-calendar-picker-indicator {
+    font-size: 0.8rem;
+    padding: 2px;
   }
   
   .btn {
