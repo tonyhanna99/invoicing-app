@@ -293,6 +293,8 @@ input[type="text"] {
     flex-direction: column;
     gap: 12px;
     margin-bottom: 16px;
+    width: 100%;
+    overflow: hidden;
   }
   
   .app { 
@@ -303,7 +305,9 @@ input[type="text"] {
   
   .card { 
     padding: 20px; 
-    border-radius: 16px; 
+    border-radius: 16px;
+    overflow: hidden;
+    box-sizing: border-box;
   }
   
   h1 { 
@@ -339,6 +343,15 @@ input[type="text"] {
     width: 100%;
     padding: 12px 16px;
     font-size: 0.95rem;
+    min-width: 0; /* Allow inputs to shrink below their content width */
+  }
+  
+  input[type="date"] {
+    font-size: 0.9rem;
+    padding: 12px 14px;
+    /* Ensure date inputs don't overflow */
+    max-width: 100%;
+    overflow: hidden;
   }
   
   .btn {
