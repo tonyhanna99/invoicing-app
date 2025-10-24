@@ -115,7 +115,7 @@ export default function App() {
   return (
     <div className="app">
       <div className="card">
-        <img src="/TrinityLogo.png" alt="Trinity Logo" className="logo" />
+        <img src={import.meta.env.BASE_URL + 'TrinityLogo.png'} alt="Trinity Logo" className="logo" />
         <div className="meta">
           <div>
             <h1>Invoice Generator</h1>
