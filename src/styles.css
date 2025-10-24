@@ -163,6 +163,25 @@ input:focus {
   transform: translateY(-1px);
 }
 
+input.error {
+  border-color: #e53e3e;
+  background: #fef5f5;
+  box-shadow: 0 0 0 4px rgba(229, 62, 62, 0.1);
+}
+
+input.error:focus {
+  border-color: #e53e3e;
+  box-shadow: 0 0 0 4px rgba(229, 62, 62, 0.1);
+}
+
+.error-message {
+  color: #e53e3e;
+  font-size: 0.85rem;
+  font-weight: 500;
+  margin-top: 4px;
+  display: block;
+}
+
 input::placeholder {
   color: #a0aec0;
   font-weight: 400;
@@ -178,12 +197,23 @@ input[type="text"] {
   color: var(--text);
 }
 
+.field-label,
 .date-label,
 .amount-label {
   display: flex;
   gap: 8px;
   align-items: center;
   flex: 1;
+}
+
+.field-label {
+  flex-direction: column;
+  align-items: flex-start;
+  width: 100%;
+}
+
+.field-label input {
+  width: 100%;
 }
 
 .btn {
@@ -296,6 +326,7 @@ input[type="text"] {
     font-size: 0.85rem;
   }
   
+  .field-label,
   .date-label,
   .amount-label {
     flex-direction: column;
