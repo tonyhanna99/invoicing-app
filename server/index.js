@@ -11,27 +11,32 @@ const { PDFDocument } = require('pdf-lib')
 
 const app = express()
 
-// Enable CORS for all origins in development, specific origin in production
-app.use(cors({
-  origin: process.env.NODE_ENV === 'production' 
-    ? 'https://tetriastech.github.io/invoicing-app' 
-    : 'http://localhost:5173',
-  methods: ['GET', 'POST', 'OPTIONS'],
-  allowedHeaders: ['Content-Type']
-}))
-// This accepts requests with no origin (e.g. curl or native apps) or from localhost dev ports.
+// Enable CORS - allow GitHub Pages in production and localhost in development
 app.use(cors({
   origin: function (origin, callback) {
-    // allow requests with no origin (like curl or native apps)
+    // Allow requests with no origin (like mobile apps, curl, Postman)
     if (!origin) return callback(null, true)
-    // allow any localhost origin (http://localhost:5173, http://localhost:5176, etc.)
-    if (/^https?:\/\/localhost(:\d+)?$/.test(origin)) return callback(null, true)
-    // otherwise block
+    
+    // In production, allow GitHub Pages
+    if (process.env.NODE_ENV === 'production') {
+      if (origin === 'https://tetriastech.github.io') {
+        return callback(null, true)
+      }
+    }
+    
+    // In development, allow any localhost origin
+    if (/^https?:\/\/localhost(:\d+)?$/.test(origin)) {
+      return callback(null, true)
+    }
+    
+    // Block everything else
     return callback(new Error('Not allowed by CORS'))
   },
   methods: ['GET', 'POST', 'OPTIONS'],
+  allowedHeaders: ['Content-Type'],
   credentials: true
 }))
+
 // Enable preflight for all routes
 app.options('*', cors())
 app.use(express.json({ limit: '50mb' }))
