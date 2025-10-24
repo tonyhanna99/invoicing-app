@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: tetrias-invoicing-backend
+    env: node
+    buildCommand: cd server && npm install && apt-get update && apt-get install -y libreoffice
+    startCommand: cd server && node index.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+    repo:
+      name: TetriasTech/invoicing-app
+      type: github
