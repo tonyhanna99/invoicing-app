@@ -14,21 +14,12 @@ const app = express()
 // Enable CORS - allow GitHub Pages in production and localhost in development
 app.use(cors({
   origin: function (origin, callback) {
-    // Allow requests with no origin (like mobile apps, curl, Postman)
+    // Always allow requests with no origin (curl, mobile, etc.)
     if (!origin) return callback(null, true)
-    
-    // In production, allow GitHub Pages
-    if (process.env.NODE_ENV === 'production') {
-      if (origin === 'https://tetriastech.github.io') {
-        return callback(null, true)
-      }
-    }
-    
-    // In development, allow any localhost origin
-    if (/^https?:\/\/localhost(:\d+)?$/.test(origin)) {
-      return callback(null, true)
-    }
-    
+    // Always allow GitHub Pages
+    if (origin === 'https://tetriastech.github.io') return callback(null, true)
+    // Always allow localhost for dev
+    if (/^https?:\/\/localhost(:\d+)?$/.test(origin)) return callback(null, true)
     // Block everything else
     return callback(new Error('Not allowed by CORS'))
   },
