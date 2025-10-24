@@ -9,14 +9,18 @@ RUN apt-get update && \
 # Set working directory
 WORKDIR /app
 
-# Copy package files
-COPY package*.json ./
+# Copy template files from root directory to container root
+COPY Invoice\ Template.docx /Invoice\ Template.docx
+COPY Invoice.pdf /Invoice.pdf
+
+# Copy server package files
+COPY server/package*.json ./
 
 # Install dependencies
 RUN npm install
 
-# Copy application code
-COPY . .
+# Copy server code
+COPY server/ .
 
 # Expose port
 EXPOSE 10000
