@@ -4,12 +4,12 @@ services:
     env: node
     rootDir: server
     buildCommand: npm install && apt-get update && apt-get install -y libreoffice
-    startCommand: node index.js
+    startCommand: PORT=3000 node index.js
     envVars:
       - key: NODE_ENV
         value: production
       - key: PORT
-        value: "10000"
+        value: "3000"
     repo:
       name: TetriasTech/invoicing-app
       type: github
