@@ -52,7 +52,7 @@ export default function App() {
         payment_method: 'Transfer'
       }
 
-      const resp = await fetch('http://localhost:4000/generate', {
+      const resp = await fetch('https://invoicing-app-8m4i.onrender.com/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
