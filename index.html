@@ -3,11 +3,27 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <meta name="theme-color" content="#77AC26" />
+    <!-- Match status bar to app background (Android/Safari tab) -->
+    <meta name="theme-color" content="#f5f7fa" />
+    <!-- Enable iOS PWA and let page background show behind the notch/status bar -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <link rel="icon" type="image/png" href="/icon-512.png" />
     <link rel="apple-touch-icon" href="/icon-512.png" />
     <link rel="manifest" href="/manifest.json" />
     <title>Trinity Invoice Generator</title>
+    <script>
+      // Add a class when running as an installed PWA to enable safe-area CSS rules
+      (function() {
+        var isStandalone = (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || window.navigator.standalone;
+        if (isStandalone) {
+          document.documentElement.classList.add('standalone');
+          document.addEventListener('DOMContentLoaded', function() {
+            document.body.classList.add('standalone');
+          });
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>
