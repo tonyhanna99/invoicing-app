@@ -3,8 +3,6 @@ import { PDFDocument } from 'pdf-lib'
 import { db } from './firebase'
 import { doc, runTransaction, getDoc } from 'firebase/firestore'
 
-const INVOICE_COUNTER_DOC = 'invoicing/settings'
-
 async function getNextInvoiceNumber() {
   try {
     const counterRef = doc(db, 'invoicing', 'settings')
@@ -74,6 +72,16 @@ function getTodayLocalDate() {
   const month = String(today.getMonth() + 1).padStart(2, '0');
   const day = String(today.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
+}
+
+// Helper function to set PDF form field text safely
+function setFormField(form, fieldName, value) {
+  try {
+    const field = form.getTextField(fieldName)
+    field.setText(value)
+  } catch (e) {
+    console.warn(`${fieldName} field not found:`, e)
+  }
 }
 
 export default function App() {
@@ -166,90 +174,30 @@ export default function App() {
       const clientName = customerName.trim()
       const invoiceNum = String(invoiceNumber).padStart(5, '0')
       
-      try {
-        const clientNameField = form.getTextField('client_name')
-        clientNameField.setText(clientName)
-      } catch (e) {
-        console.warn('client_name field not found:', e)
-      }
+      // Set all form fields
+      setFormField(form, 'client_name', clientName)
+      setFormField(form, 'invoice_number', invoiceNum)
+      setFormField(form, 'issue_date', formatDateToDDMMYYYY(issueDate))
+      setFormField(form, 'due_date', formatDateToDDMMYYYY(dueDate))
+      setFormField(form, 'address', address)
+      setFormField(form, 'amount', `$${amount}`)
+      setFormField(form, 'total_gst', `$${amount}`)
+      setFormField(form, 'total_due', `$${amount}`)
       
-      try {
-        const invoiceNumberField = form.getTextField('invoice_number')
-        invoiceNumberField.setText(invoiceNum)
-      } catch (e) {
-        console.warn('invoice_number field not found:', e)
-      }
+      setLoadingStep('Updating field appearances...')
       
-      try {
-        const issueDateField = form.getTextField('issue_date')
-        issueDateField.setText(formatDateToDDMMYYYY(issueDate))
-      } catch (e) {
-        console.warn('issue_date field not found:', e)
-      }
+      // Update field appearances to ensure proper rendering without flattening
+      form.updateFieldAppearances()
       
-      try {
-        const dueDateField = form.getTextField('due_date')
-        dueDateField.setText(formatDateToDDMMYYYY(dueDate))
-      } catch (e) {
-        console.warn('due_date field not found:', e)
-      }
-      
-      try {
-        const addressField = form.getTextField('address')
-        addressField.setText(address)
-      } catch (e) {
-        console.warn('address field not found:', e)
-      }
-      
-      try {
-        const amountField = form.getTextField('amount')
-        amountField.setText(`$${amount}`)
-      } catch (e) {
-        console.warn('amount field not found:', e)
-      }
-      
-      try {
-        const totalGstField = form.getTextField('total_gst')
-        totalGstField.setText(`$${amount}`)
-      } catch (e) {
-        console.warn('total_gst field not found:', e)
-      }
-      
-      try {
-        const totalDueField = form.getTextField('total_due')
-        totalDueField.setText(`$${amount}`)
-      } catch (e) {
-        console.warn('total_due field not found:', e)
-      }
-      
-      setLoadingStep('Locking form fields...')
-      
-      try {
-        const fields = form.getFields()
-        let flattenedCount = 0
-        
-        fields.forEach((field) => {
-          try {
-            if (field.isReadOnly && typeof field.enableReadOnly === 'function') {
-              field.enableReadOnly()
-              flattenedCount++
-            }
-          } catch (e) {
-            console.warn(`Could not lock field ${field.getName()}:`, e)
-          }
-        })
-        
-        if (flattenedCount === 0) {
-          try {
-            form.flatten({ updateFieldAppearances: false })
-          } catch (e) {
-            console.warn('Form flattening failed:', e)
-          }
+      // Mark fields as read-only instead of flattening
+      const fields = form.getFields()
+      fields.forEach((field) => {
+        try {
+          field.enableReadOnly()
+        } catch (e) {
+          console.warn(`Could not set field ${field.getName()} to read-only:`, e)
         }
-        
-      } catch (e) {
-        console.warn('Form locking failed:', e)
-      }
+      })
       
       setLoadingStep('Generating PDF...')
       
@@ -274,12 +222,11 @@ export default function App() {
       setInvoiceNumber(nextInvoiceNumber)
       
       setMessage(`Generated invoice-${invoiceNum}.pdf`)
-      setIsLoading(false)
-      setLoadingStep('')
       
     } catch (error) {
       console.error('Error filling PDF:', error)
       setMessage('Error generating PDF: ' + error.message)
+    } finally {
       setIsLoading(false)
       setLoadingStep('')
     }
