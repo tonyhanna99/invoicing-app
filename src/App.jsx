@@ -186,18 +186,26 @@ export default function App() {
       
       setLoadingStep('Updating field appearances...')
       
-      // Update field appearances to ensure proper rendering without flattening
+      // Update field appearances to ensure proper rendering
       form.updateFieldAppearances()
       
-      // Mark fields as read-only instead of flattening
+      // Make fields read-only by setting the ReadOnly flag
       const fields = form.getFields()
       fields.forEach((field) => {
         try {
-          field.enableReadOnly()
+          // Get the underlying acroField and set ReadOnly flag
+          const acroField = field.acroField
+          acroField.setFlagTo(1, true) // Flag 1 is ReadOnly
         } catch (e) {
           console.warn(`Could not set field ${field.getName()} to read-only:`, e)
         }
       })
+      
+      setLoadingStep('Flattening form...')
+      
+      // Flatten the form to make it non-editable
+      // This will throw an error if the PDF template is still corrupted
+      form.flatten()
       
       setLoadingStep('Generating PDF...')
       
