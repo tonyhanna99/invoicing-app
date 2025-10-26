@@ -331,7 +331,7 @@ export default function App() {
         <form onSubmit={handleGenerate}>
           <div className="form-row">
             <label className="field-label">
-              Customer Name
+              Customer Name *
               <input 
                 placeholder="Enter customer name" 
                 value={customerName} 
@@ -349,7 +349,7 @@ export default function App() {
 
           <div className="form-row">
             <label className="field-label">
-              Address
+              Address *
               <input 
                 placeholder="Enter customer address" 
                 value={address} 
