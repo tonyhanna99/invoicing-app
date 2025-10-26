@@ -79,21 +79,22 @@ export default function App() {
     setMessage('')
 
     try {
-      // Load the PDF template
       const templateUrl = import.meta.env.BASE_URL + 'Fillable Invoice Template.pdf'
-      const existingPdfBytes = await fetch(templateUrl).then(res => res.arrayBuffer())
+      const response = await fetch(templateUrl)
+      if (!response.ok) {
+        throw new Error(`Failed to fetch PDF: ${response.status} ${response.statusText}`)
+      }
+      
+      const existingPdfBytes = await response.arrayBuffer()
       
       setLoadingStep('Filling form fields...')
       
-      // Load the PDF with pdf-lib
       const pdfDoc = await PDFDocument.load(existingPdfBytes)
       const form = pdfDoc.getForm()
       
-      // Fill the form fields
       const clientName = customerName.trim()
       const invoiceNum = String(invoiceNumber).padStart(5, '0')
       
-      // Get and fill the form fields
       try {
         const clientNameField = form.getTextField('client_name')
         clientNameField.setText(clientName)
@@ -150,15 +151,39 @@ export default function App() {
         console.warn('total_due field not found:', e)
       }
       
-      // Flatten the form to make fields non-editable
-      form.flatten()
+      setLoadingStep('Locking form fields...')
+      
+      try {
+        const fields = form.getFields()
+        let flattenedCount = 0
+        
+        fields.forEach((field) => {
+          try {
+            if (field.isReadOnly && typeof field.enableReadOnly === 'function') {
+              field.enableReadOnly()
+              flattenedCount++
+            }
+          } catch (e) {
+            console.warn(`Could not lock field ${field.getName()}:`, e)
+          }
+        })
+        
+        if (flattenedCount === 0) {
+          try {
+            form.flatten({ updateFieldAppearances: false })
+          } catch (e) {
+            console.warn('Form flattening failed:', e)
+          }
+        }
+        
+      } catch (e) {
+        console.warn('Form locking failed:', e)
+      }
       
       setLoadingStep('Generating PDF...')
       
-      // Serialize the PDF
       const pdfBytes = await pdfDoc.save()
       
-      // Download the filled PDF
       const blob = new Blob([pdfBytes], { type: 'application/pdf' })
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
@@ -169,7 +194,6 @@ export default function App() {
       a.remove()
       URL.revokeObjectURL(url)
       
-      // Update state
       incrementInvoiceNumber()
       setInvoiceNumber(getNextInvoiceNumber())
       setMessage(`Generated invoice-${invoiceNum}.pdf`)
