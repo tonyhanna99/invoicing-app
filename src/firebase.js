@@ -5,13 +5,13 @@ import { getAnalytics } from "firebase/analytics";
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
-  apiKey: "AIzaSyDcKjb8Pg9Jx3Jf6RHgoMXxjoglVMt8dMc",
-  authDomain: "tetrias-tech.firebaseapp.com",
-  projectId: "tetrias-tech",
-  storageBucket: "tetrias-tech.firebasestorage.app",
-  messagingSenderId: "887716742400",
-  appId: "1:887716742400:web:3f80769867a8f650825fe5",
-  measurementId: "G-KZZJC1BTMB"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "AIzaSyDcKjb8Pg9Jx3Jf6RHgoMXxjoglVMt8dMc",
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "tetrias-tech.firebaseapp.com",
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "tetrias-tech",
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "tetrias-tech.firebasestorage.app",
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "887716742400",
+  appId: import.meta.env.VITE_FIREBASE_APP_ID || "1:887716742400:web:3f80769867a8f650825fe5",
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID || "G-KZZJC1BTMB"
 };
 
 // Initialize Firebase
