@@ -8,7 +8,7 @@ A professional invoice generation system that fills PDF form fields directly in 
 
 - 🖋 Fill in customer details through a user-friendly form
 - 📄 Fill PDF form fields directly in the browser using pdf-lib
-- 🔢 Auto-incrementing invoice numbers with localStorage persistence
+- 🔢 Auto-incrementing invoice numbers with Firebase Firestore sync
 - � Fully client-side - no server required
 - 📱 Responsive design for mobile and desktop
 - 🎨 Professional modern UI with loading states
@@ -66,9 +66,10 @@ The built files will be in the `dist/` directory and can be deployed to any stat
 
 The application uses:
 - **Frontend**: React + Vite
+- **Database**: Firebase Firestore (cloud database with offline fallback)
 - **PDF Processing**: pdf-lib (client-side PDF form filling)
 - **Styling**: Modern CSS with CSS custom properties
-- **State Management**: React hooks with localStorage for invoice counter
+- **State Management**: React hooks with Firebase Firestore for invoice counter
 - **Deployment**: GitHub Pages with automated CI/CD
 
 ### Files Structure

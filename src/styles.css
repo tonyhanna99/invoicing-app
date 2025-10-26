@@ -168,7 +168,7 @@ input {
 input:focus {
   outline: none;
   border-color: var(--highlight);
-  background: white;
+  background: white !important;
   box-shadow: 0 0 0 4px rgba(119, 172, 38, 0.1);
   transform: translateY(-1px);
 }
@@ -195,6 +195,26 @@ input.error:focus {
 input::placeholder {
   color: #a0aec0;
   font-weight: 400;
+}
+
+/* Pre-filled field styling */
+input.prefilled {
+  background-color: #f8f9fa !important;
+  color: #6c757d;
+  font-style: italic;
+  border-color: #dee2e6;
+}
+
+input.prefilled:hover {
+  background-color: #e9ecef !important;
+  border-color: var(--highlight);
+  color: #495057;
+}
+
+input.prefilled:focus {
+  background-color: white !important;
+  font-style: normal;
+  color: var(--text);
 }
 
 input[type="date"],

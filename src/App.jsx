@@ -1,18 +1,62 @@
 import React, { useState, useEffect } from 'react'
 import { PDFDocument } from 'pdf-lib'
+import { db } from './firebase'
+import { doc, runTransaction, getDoc } from 'firebase/firestore'
 
-const COUNTER_KEY = 'invoice_counter_v1'
+const INVOICE_COUNTER_DOC = 'invoicing/settings'
 
-function getNextInvoiceNumber() {
-  const raw = localStorage.getItem(COUNTER_KEY)
-  const n = raw ? parseInt(raw, 10) : 0
-  return n + 1
+async function getNextInvoiceNumber() {
+  try {
+    const counterRef = doc(db, 'invoicing', 'settings')
+    const counterDoc = await getDoc(counterRef)
+    
+    if (counterDoc.exists()) {
+      const data = counterDoc.data()
+      return (data.invoice_counter || 0) + 1
+    } else {
+      return 1 // First invoice
+    }
+  } catch (error) {
+    console.error('Error getting invoice number:', error)
+    // Fallback to localStorage if Firebase fails
+    const raw = localStorage.getItem('invoice_counter_v1')
+    const n = raw ? parseInt(raw, 10) : 0
+    return n + 1
+  }
 }
 
-function incrementInvoiceNumber() {
-  const raw = localStorage.getItem(COUNTER_KEY)
-  const n = raw ? parseInt(raw, 10) : 0
-  localStorage.setItem(COUNTER_KEY, String(n + 1))
+async function incrementInvoiceNumber() {
+  try {
+    const counterRef = doc(db, 'invoicing', 'settings')
+    
+    const newCounter = await runTransaction(db, async (transaction) => {
+      const counterDoc = await transaction.get(counterRef)
+      
+      let currentCounter = 0
+      if (counterDoc.exists()) {
+        currentCounter = counterDoc.data().invoice_counter || 0
+      }
+      
+      const newCounter = currentCounter + 1
+      transaction.set(counterRef, { 
+        invoice_counter: newCounter,
+        last_updated: new Date().toISOString()
+      })
+      
+      return newCounter
+    })
+    
+    // Return the NEXT invoice number (the one that will be used for the next invoice)
+    return newCounter + 1
+  } catch (error) {
+    console.error('Error incrementing invoice number:', error)
+    // Fallback to localStorage if Firebase fails
+    const raw = localStorage.getItem('invoice_counter_v1')
+    const n = raw ? parseInt(raw, 10) : 0
+    localStorage.setItem('invoice_counter_v1', String(n + 1))
+    // Return the next number for UI
+    return n + 2
+  }
 }
 
 function formatDateToDDMMYYYY(dateString) {
@@ -35,7 +79,7 @@ function getTodayLocalDate() {
 export default function App() {
   const [customerName, setCustomerName] = useState('')
   const [address, setAddress] = useState('')
-  const [invoiceNumber, setInvoiceNumber] = useState(() => getNextInvoiceNumber())
+  const [invoiceNumber, setInvoiceNumber] = useState(1)
   const [message, setMessage] = useState('')
   const [issueDate, setIssueDate] = useState(() => getTodayLocalDate())
   const [dueDate, setDueDate] = useState(() => getTodayLocalDate())
@@ -43,11 +87,38 @@ export default function App() {
   const [isLoading, setIsLoading] = useState(false)
   const [loadingStep, setLoadingStep] = useState('')
   const [errors, setErrors] = useState({})
+  const [isLoadingInvoiceNumber, setIsLoadingInvoiceNumber] = useState(true)
+  const [firebaseError, setFirebaseError] = useState('')
+  const [dueDateManuallySet, setDueDateManuallySet] = useState(false)
 
-  // keep due date in sync to issue date by default
+  // Load next invoice number on component mount
   useEffect(() => {
-    setDueDate(issueDate)
-  }, [issueDate])
+    const loadInvoiceNumber = async () => {
+      try {
+        setFirebaseError('')
+        const nextNumber = await getNextInvoiceNumber()
+        setInvoiceNumber(nextNumber)
+      } catch (error) {
+        console.error('Failed to load invoice number:', error)
+        setFirebaseError('Using offline mode - invoice numbers may not sync across devices')
+        // Fallback to localStorage
+        const raw = localStorage.getItem('invoice_counter_v1')
+        const n = raw ? parseInt(raw, 10) : 0
+        setInvoiceNumber(n + 1)
+      } finally {
+        setIsLoadingInvoiceNumber(false)
+      }
+    }
+    
+    loadInvoiceNumber()
+  }, [])
+
+  // keep due date in sync to issue date by default (unless user manually changed it)
+  useEffect(() => {
+    if (!dueDateManuallySet) {
+      setDueDate(issueDate)
+    }
+  }, [issueDate, dueDateManuallySet])
 
   const handleGenerate = async (e) => {
     e.preventDefault()
@@ -194,8 +265,14 @@ export default function App() {
       a.remove()
       URL.revokeObjectURL(url)
       
-      incrementInvoiceNumber()
-      setInvoiceNumber(getNextInvoiceNumber())
+      setLoadingStep('Updating invoice counter...')
+      
+      // Increment the counter in Firebase and get the next invoice number for UI
+      const nextInvoiceNumber = await incrementInvoiceNumber()
+      
+      // Update the UI to show the next invoice number immediately
+      setInvoiceNumber(nextInvoiceNumber)
+      
       setMessage(`Generated invoice-${invoiceNum}.pdf`)
       setIsLoading(false)
       setLoadingStep('')
@@ -217,10 +294,38 @@ export default function App() {
             <h1>Invoice Generator</h1>
             <div className="muted">Create professional invoices instantly</div>
           </div>
-          <div className="muted" style={{textAlign: 'right'}}>
-            <div>Invoice #</div>
-            <div style={{fontSize: '1.2em', fontWeight: 500}}>{String(invoiceNumber).padStart(5,'0')}</div>
-          </div>
+          <label className="field-label" style={{textAlign: 'right', alignItems: 'flex-end'}}>
+            Invoice Number
+            {isLoadingInvoiceNumber ? (
+              <input 
+                disabled 
+                value="Loading..." 
+                className="prefilled"
+                style={{
+                  textAlign: 'right',
+                  maxWidth: '120px'
+                }}
+              />
+            ) : (
+              <input 
+                type="text"
+                value={String(invoiceNumber).padStart(5,'0')}
+                onChange={(e) => {
+                  const value = e.target.value.replace(/\D/g, '') // Only allow numbers
+                  if (value) {
+                    setInvoiceNumber(parseInt(value, 10))
+                  }
+                }}
+                className="prefilled"
+                style={{
+                  textAlign: 'right',
+                  maxWidth: '120px',
+                  fontWeight: '500'
+                }}
+                placeholder="00001"
+              />
+            )}
+          </label>
         </div>
 
         <form onSubmit={handleGenerate}>
@@ -263,17 +368,30 @@ export default function App() {
           <div className="form-row">
             <label className="date-label">
               Issue Date
-              <input type="date" value={issueDate} onChange={(e) => setIssueDate(e.target.value)} />
+              <input 
+                type="date" 
+                value={issueDate} 
+                onChange={(e) => setIssueDate(e.target.value)}
+                className="prefilled"
+              />
             </label>
             <label className="date-label">
               Due Date
-              <input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
+              <input 
+                type="date" 
+                value={dueDate} 
+                onChange={(e) => {
+                  setDueDate(e.target.value)
+                  setDueDateManuallySet(true)
+                }}
+                className="prefilled"
+              />
             </label>
           </div>
 
           <div className="form-row">
             <label className="amount-label">
-              Amount
+              Amount ($)
               <input 
                 type="text" 
                 value={amount} 
@@ -283,7 +401,8 @@ export default function App() {
                     setErrors(prev => ({ ...prev, amount: '' }))
                   }
                 }}
-                className={errors.amount ? 'error' : ''}
+                className={errors.amount ? 'error' : 'prefilled'}
+                placeholder="660"
               />
               {errors.amount && <span className="error-message">{errors.amount}</span>}
             </label>
@@ -309,6 +428,19 @@ export default function App() {
             </button>
           </div>
         </form>
+
+        {firebaseError && (
+          <div className="message-box" style={{
+            background: 'linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%)',
+            color: '#856404',
+            borderColor: 'rgba(255, 193, 7, 0.3)'
+          }}>
+            <svg width="22" height="22" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.19-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
+            </svg>
+            <span>{firebaseError}</span>
+          </div>
+        )}
 
         {message && (
           <div className="message-box">
