@@ -158,7 +158,7 @@ export default function App() {
     setMessage('')
 
     try {
-      const templateUrl = `${import.meta.env.BASE_URL}Fillable Invoice Template.pdf`
+      const templateUrl = `${import.meta.env.BASE_URL}Page 1 Clean.pdf`
       const response = await fetch(templateUrl)
       if (!response.ok) {
         throw new Error(`Failed to fetch PDF: ${response.status} ${response.statusText}`)
@@ -207,7 +207,24 @@ export default function App() {
       // This will throw an error if the PDF template is still corrupted
       form.flatten()
       
-      setLoadingStep('Generating PDF...')
+      setLoadingStep('Combining with remaining pages...')
+      
+      // Load the Remaining Pages PDF
+      const remainingPagesUrl = `${import.meta.env.BASE_URL}Remaining Pages.pdf`
+      const remainingResponse = await fetch(remainingPagesUrl)
+      if (!remainingResponse.ok) {
+        throw new Error(`Failed to fetch Remaining Pages PDF: ${remainingResponse.status} ${remainingResponse.statusText}`)
+      }
+      const remainingPdfBytes = await remainingResponse.arrayBuffer()
+      const remainingPdfDoc = await PDFDocument.load(remainingPdfBytes)
+      
+      // Copy all pages from Remaining Pages PDF to the main document
+      const remainingPages = await pdfDoc.copyPages(remainingPdfDoc, remainingPdfDoc.getPageIndices())
+      remainingPages.forEach((page) => {
+        pdfDoc.addPage(page)
+      })
+      
+      setLoadingStep('Generating final PDF...')
       
       const pdfBytes = await pdfDoc.save()
       
