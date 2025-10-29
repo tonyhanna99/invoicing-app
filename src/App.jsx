@@ -98,6 +98,8 @@ export default function App() {
   const [isLoadingInvoiceNumber, setIsLoadingInvoiceNumber] = useState(true)
   const [firebaseError, setFirebaseError] = useState('')
   const [dueDateManuallySet, setDueDateManuallySet] = useState(false)
+  const [generatedPdfBytes, setGeneratedPdfBytes] = useState(null)
+  const [generatedInvoiceNum, setGeneratedInvoiceNum] = useState(null)
 
   // Load next invoice number on component mount
   useEffect(() => {
@@ -128,13 +130,13 @@ export default function App() {
     }
   }, [issueDate, dueDateManuallySet])
 
-  const handleGenerate = async (e) => {
-    e.preventDefault()
-    
-    // Clear previous errors
-    setErrors({})
-    setMessage('')
-    
+  // Clear generated PDF when form fields change (but NOT when invoice number changes)
+  useEffect(() => {
+    setGeneratedPdfBytes(null)
+    setGeneratedInvoiceNum(null)
+  }, [customerName, address, issueDate, dueDate, amount])
+
+  const generatePdfBytes = async () => {
     // Validate required fields
     const newErrors = {}
     if (!customerName.trim()) {
@@ -150,93 +152,98 @@ export default function App() {
     // If there are errors, show them and don't proceed
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors)
-      return
+      throw new Error('Validation failed')
+    }
+
+    setLoadingStep('Loading PDF template...')
+
+    const templateUrl = `${import.meta.env.BASE_URL}Page 1 Clean.pdf`
+    const response = await fetch(templateUrl)
+    if (!response.ok) {
+      throw new Error(`Failed to fetch PDF: ${response.status} ${response.statusText}`)
     }
     
-    setIsLoading(true)
-    setLoadingStep('Loading PDF template...')
+    const existingPdfBytes = await response.arrayBuffer()
+    
+    setLoadingStep('Filling form fields...')
+    
+    const pdfDoc = await PDFDocument.load(existingPdfBytes)
+    const form = pdfDoc.getForm()
+    
+    const clientName = customerName.trim()
+    const invoiceNum = String(invoiceNumber).padStart(5, '0')
+    
+    // Set all form fields
+    setFormField(form, 'client_name', clientName)
+    setFormField(form, 'invoice_number', invoiceNum)
+    setFormField(form, 'issue_date', formatDateToDDMMYYYY(issueDate))
+    setFormField(form, 'due_date', formatDateToDDMMYYYY(dueDate))
+    setFormField(form, 'address', address)
+    setFormField(form, 'amount', `$${amount}`)
+    setFormField(form, 'total_gst', `$${amount}`)
+    setFormField(form, 'total_due', `$${amount}`)
+    
+    setLoadingStep('Updating field appearances...')
+    
+    // Update field appearances to ensure proper rendering
+    form.updateFieldAppearances()
+    
+    // Make fields read-only by setting the ReadOnly flag
+    const fields = form.getFields()
+    fields.forEach((field) => {
+      try {
+        // Get the underlying acroField and set ReadOnly flag
+        const acroField = field.acroField
+        acroField.setFlagTo(1, true) // Flag 1 is ReadOnly
+      } catch (e) {
+        console.warn(`Could not set field ${field.getName()} to read-only:`, e)
+      }
+    })
+    
+    setLoadingStep('Flattening form...')
+    
+    // Flatten the form to make it non-editable
+    form.flatten()
+    
+    setLoadingStep('Combining with remaining pages...')
+    
+    // Load the Remaining Pages PDF
+    const remainingPagesUrl = `${import.meta.env.BASE_URL}Remaining Pages.pdf`
+    const remainingResponse = await fetch(remainingPagesUrl)
+    if (!remainingResponse.ok) {
+      throw new Error(`Failed to fetch Remaining Pages PDF: ${remainingResponse.status} ${remainingResponse.statusText}`)
+    }
+    const remainingPdfBytes = await remainingResponse.arrayBuffer()
+    const remainingPdfDoc = await PDFDocument.load(remainingPdfBytes)
+    
+    // Copy all pages from Remaining Pages PDF to the main document
+    const remainingPages = await pdfDoc.copyPages(remainingPdfDoc, remainingPdfDoc.getPageIndices())
+    remainingPages.forEach((page) => {
+      pdfDoc.addPage(page)
+    })
+    
+    setLoadingStep('Generating final PDF...')
+    
+    const pdfBytes = await pdfDoc.save()
+    
+    return { pdfBytes, invoiceNum }
+  }
+
+  const handleGenerate = async (e) => {
+    e.preventDefault()
+    
+    // Clear previous errors
+    setErrors({})
     setMessage('')
+    
+    setIsLoading(true)
 
     try {
-      const templateUrl = `${import.meta.env.BASE_URL}Page 1 Clean.pdf`
-      const response = await fetch(templateUrl)
-      if (!response.ok) {
-        throw new Error(`Failed to fetch PDF: ${response.status} ${response.statusText}`)
-      }
+      const { pdfBytes, invoiceNum } = await generatePdfBytes()
       
-      const existingPdfBytes = await response.arrayBuffer()
-      
-      setLoadingStep('Filling form fields...')
-      
-      const pdfDoc = await PDFDocument.load(existingPdfBytes)
-      const form = pdfDoc.getForm()
-      
-      const clientName = customerName.trim()
-      const invoiceNum = String(invoiceNumber).padStart(5, '0')
-      
-      // Set all form fields
-      setFormField(form, 'client_name', clientName)
-      setFormField(form, 'invoice_number', invoiceNum)
-      setFormField(form, 'issue_date', formatDateToDDMMYYYY(issueDate))
-      setFormField(form, 'due_date', formatDateToDDMMYYYY(dueDate))
-      setFormField(form, 'address', address)
-      setFormField(form, 'amount', `$${amount}`)
-      setFormField(form, 'total_gst', `$${amount}`)
-      setFormField(form, 'total_due', `$${amount}`)
-      
-      setLoadingStep('Updating field appearances...')
-      
-      // Update field appearances to ensure proper rendering
-      form.updateFieldAppearances()
-      
-      // Make fields read-only by setting the ReadOnly flag
-      const fields = form.getFields()
-      fields.forEach((field) => {
-        try {
-          // Get the underlying acroField and set ReadOnly flag
-          const acroField = field.acroField
-          acroField.setFlagTo(1, true) // Flag 1 is ReadOnly
-        } catch (e) {
-          console.warn(`Could not set field ${field.getName()} to read-only:`, e)
-        }
-      })
-      
-      setLoadingStep('Flattening form...')
-      
-      // Flatten the form to make it non-editable
-      // This will throw an error if the PDF template is still corrupted
-      form.flatten()
-      
-      setLoadingStep('Combining with remaining pages...')
-      
-      // Load the Remaining Pages PDF
-      const remainingPagesUrl = `${import.meta.env.BASE_URL}Remaining Pages.pdf`
-      const remainingResponse = await fetch(remainingPagesUrl)
-      if (!remainingResponse.ok) {
-        throw new Error(`Failed to fetch Remaining Pages PDF: ${remainingResponse.status} ${remainingResponse.statusText}`)
-      }
-      const remainingPdfBytes = await remainingResponse.arrayBuffer()
-      const remainingPdfDoc = await PDFDocument.load(remainingPdfBytes)
-      
-      // Copy all pages from Remaining Pages PDF to the main document
-      const remainingPages = await pdfDoc.copyPages(remainingPdfDoc, remainingPdfDoc.getPageIndices())
-      remainingPages.forEach((page) => {
-        pdfDoc.addPage(page)
-      })
-      
-      setLoadingStep('Generating final PDF...')
-      
-      const pdfBytes = await pdfDoc.save()
-      
-      const blob = new Blob([pdfBytes], { type: 'application/pdf' })
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `invoice-${invoiceNum}.pdf`
-      document.body.appendChild(a)
-      a.click()
-      a.remove()
-      URL.revokeObjectURL(url)
+      // Store the generated PDF
+      setGeneratedPdfBytes(pdfBytes)
+      setGeneratedInvoiceNum(invoiceNum)
       
       setLoadingStep('Updating invoice counter...')
       
@@ -246,15 +253,74 @@ export default function App() {
       // Update the UI to show the next invoice number immediately
       setInvoiceNumber(nextInvoiceNumber)
       
-      setMessage(`Generated invoice-${invoiceNum}.pdf`)
+      setMessage(`Invoice ${invoiceNum} generated! Use the buttons below to save or preview.`)
       
     } catch (error) {
-      console.error('Error filling PDF:', error)
-      setMessage('Error generating PDF: ' + error.message)
+      if (error.message !== 'Validation failed') {
+        console.error('Error filling PDF:', error)
+        setMessage('Error generating PDF: ' + error.message)
+      }
     } finally {
       setIsLoading(false)
       setLoadingStep('')
     }
+  }
+
+  const handleSaveAs = async () => {
+    if (!generatedPdfBytes || !generatedInvoiceNum) return
+
+    try {
+      // Check if File System Access API is supported
+      if ('showSaveFilePicker' in window) {
+        const handle = await window.showSaveFilePicker({
+          suggestedName: `invoice-${generatedInvoiceNum}.pdf`,
+          types: [{
+            description: 'PDF Files',
+            accept: { 'application/pdf': ['.pdf'] }
+          }]
+        })
+        
+        const writable = await handle.createWritable()
+        await writable.write(generatedPdfBytes)
+        await writable.close()
+        
+        setMessage(`Invoice ${generatedInvoiceNum} saved successfully!`)
+      } else {
+        // Fallback to traditional download for unsupported browsers
+        const blob = new Blob([generatedPdfBytes], { type: 'application/pdf' })
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `invoice-${generatedInvoiceNum}.pdf`
+        document.body.appendChild(a)
+        a.click()
+        a.remove()
+        URL.revokeObjectURL(url)
+        
+        setMessage(`Invoice ${generatedInvoiceNum} downloaded!`)
+      }
+    } catch (error) {
+      if (error.name === 'AbortError') {
+        // User cancelled the save dialog
+        setMessage('Save cancelled')
+      } else {
+        console.error('Error saving PDF:', error)
+        setMessage('Error saving PDF: ' + error.message)
+      }
+    }
+  }
+
+  const handlePreview = () => {
+    if (!generatedPdfBytes) return
+
+    const blob = new Blob([generatedPdfBytes], { type: 'application/pdf' })
+    const url = URL.createObjectURL(blob)
+    window.open(url, '_blank')
+    
+    // Clean up the blob URL after a delay
+    setTimeout(() => URL.revokeObjectURL(url), 1000)
+    
+    setMessage(`Invoice ${generatedInvoiceNum} opened in new tab!`)
   }
 
   return (
@@ -391,6 +457,32 @@ export default function App() {
             </button>
           </div>
         </form>
+
+        {generatedPdfBytes && (
+          <div className="form-row" style={{gap:'12px',marginTop:'16px'}}>
+            <button 
+              className="btn" 
+              onClick={handleSaveAs}
+              style={{flex:1}}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{marginRight:'6px'}}>
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/>
+              </svg>
+              Save As...
+            </button>
+            <button 
+              className="btn" 
+              onClick={handlePreview}
+              style={{flex:1,background:'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'}}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{marginRight:'6px'}}>
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                <circle cx="12" cy="12" r="3"/>
+              </svg>
+              Preview
+            </button>
+          </div>
+        )}
 
         {firebaseError && (
           <div className="message-box" style={{
