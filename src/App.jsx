@@ -270,8 +270,19 @@ export default function App() {
     if (!generatedPdfBytes || !generatedInvoiceNum) return
 
     try {
-      // Check if File System Access API is supported
-      if ('showSaveFilePicker' in window) {
+      const blob = new Blob([generatedPdfBytes], { type: 'application/pdf' })
+      const file = new File([blob], `invoice-${generatedInvoiceNum}.pdf`, { type: 'application/pdf' })
+
+      // Check if Web Share API is supported and can share files
+      if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          files: [file],
+          title: `Invoice ${generatedInvoiceNum}`,
+          text: `Invoice ${generatedInvoiceNum}`
+        })
+        setMessage(`Invoice ${generatedInvoiceNum} shared successfully!`)
+      } else if ('showSaveFilePicker' in window) {
+        // Fallback to File System Access API if Share API not available
         const handle = await window.showSaveFilePicker({
           suggestedName: `invoice-${generatedInvoiceNum}.pdf`,
           types: [{
@@ -286,8 +297,7 @@ export default function App() {
         
         setMessage(`Invoice ${generatedInvoiceNum} saved successfully!`)
       } else {
-        // Fallback to traditional download for unsupported browsers
-        const blob = new Blob([generatedPdfBytes], { type: 'application/pdf' })
+        // Final fallback to traditional download
         const url = URL.createObjectURL(blob)
         const a = document.createElement('a')
         a.href = url
@@ -301,11 +311,11 @@ export default function App() {
       }
     } catch (error) {
       if (error.name === 'AbortError') {
-        // User cancelled the save dialog
-        setMessage('Save cancelled')
+        // User cancelled the share/save dialog
+        setMessage('Action cancelled')
       } else {
-        console.error('Error saving PDF:', error)
-        setMessage('Error saving PDF: ' + error.message)
+        console.error('Error sharing/saving PDF:', error)
+        setMessage('Error sharing/saving PDF: ' + error.message)
       }
     }
   }
@@ -466,9 +476,9 @@ export default function App() {
               style={{flex:1}}
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{marginRight:'6px'}}>
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/>
+                <path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8M16 6l-4-4-4 4M12 2v13"/>
               </svg>
-              Save As...
+              Share
             </button>
             <button 
               className="btn" 
