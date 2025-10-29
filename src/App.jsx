@@ -267,45 +267,53 @@ export default function App() {
   }
 
   const handleSaveAs = async () => {
-    if (!generatedPdfBytes || !generatedInvoiceNum) return
+    if (!generatedPdfBytes || !generatedInvoiceNum) return;
 
     try {
-      // Check if File System Access API is supported
-      if ('showSaveFilePicker' in window) {
+      const blob = new Blob([generatedPdfBytes], { type: 'application/pdf' });
+      const file = new File([blob], `invoice-${generatedInvoiceNum}.pdf`, { type: 'application/pdf' });
+
+      // Use Web Share API on mobile/Android
+      if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          files: [file],
+          title: `Invoice ${generatedInvoiceNum}`,
+          text: `Invoice ${generatedInvoiceNum}`
+        });
+        setMessage(`Invoice ${generatedInvoiceNum} shared!`);
+      }
+      // Use File System Access API on desktop
+      else if ('showSaveFilePicker' in window) {
         const handle = await window.showSaveFilePicker({
           suggestedName: `invoice-${generatedInvoiceNum}.pdf`,
           types: [{
             description: 'PDF Files',
             accept: { 'application/pdf': ['.pdf'] }
           }]
-        })
-        
-        const writable = await handle.createWritable()
-        await writable.write(generatedPdfBytes)
-        await writable.close()
-        
-        setMessage(`Invoice ${generatedInvoiceNum} saved successfully!`)
-      } else {
-        // Fallback to traditional download for unsupported browsers
-        const blob = new Blob([generatedPdfBytes], { type: 'application/pdf' })
-        const url = URL.createObjectURL(blob)
-        const a = document.createElement('a')
-        a.href = url
-        a.download = `invoice-${generatedInvoiceNum}.pdf`
-        document.body.appendChild(a)
-        a.click()
-        a.remove()
-        URL.revokeObjectURL(url)
-        
-        setMessage(`Invoice ${generatedInvoiceNum} downloaded!`)
+        });
+        const writable = await handle.createWritable();
+        await writable.write(generatedPdfBytes);
+        await writable.close();
+        setMessage(`Invoice ${generatedInvoiceNum} saved successfully!`);
+      }
+      // Fallback to traditional download
+      else {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `invoice-${generatedInvoiceNum}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+        setMessage(`Invoice ${generatedInvoiceNum} downloaded!`);
       }
     } catch (error) {
       if (error.name === 'AbortError') {
-        // User cancelled the save dialog
-        setMessage('Save cancelled')
+        setMessage('Save cancelled');
       } else {
-        console.error('Error saving PDF:', error)
-        setMessage('Error saving PDF: ' + error.message)
+        console.error('Error saving PDF:', error);
+        setMessage('Error saving PDF: ' + error.message);
       }
     }
   }
