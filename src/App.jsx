@@ -266,56 +266,19 @@ export default function App() {
     }
   }
 
-  const handleSaveAs = async () => {
-    if (!generatedPdfBytes || !generatedInvoiceNum) return;
-
-    try {
-      const blob = new Blob([generatedPdfBytes], { type: 'application/pdf' });
-      const file = new File([blob], `invoice-${generatedInvoiceNum}.pdf`, { type: 'application/pdf' });
-
-      // Use Web Share API on mobile/Android
-      if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
-        await navigator.share({
-          files: [file],
-          title: `Invoice ${generatedInvoiceNum}`,
-          text: `Invoice ${generatedInvoiceNum}`
-        });
-        setMessage(`Invoice ${generatedInvoiceNum} shared!`);
-      }
-      // Use File System Access API on desktop
-      else if ('showSaveFilePicker' in window) {
-        const handle = await window.showSaveFilePicker({
-          suggestedName: `invoice-${generatedInvoiceNum}.pdf`,
-          types: [{
-            description: 'PDF Files',
-            accept: { 'application/pdf': ['.pdf'] }
-          }]
-        });
-        const writable = await handle.createWritable();
-        await writable.write(generatedPdfBytes);
-        await writable.close();
-        setMessage(`Invoice ${generatedInvoiceNum} saved successfully!`);
-      }
-      // Fallback to traditional download
-      else {
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `invoice-${generatedInvoiceNum}.pdf`;
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        URL.revokeObjectURL(url);
-        setMessage(`Invoice ${generatedInvoiceNum} downloaded!`);
-      }
-    } catch (error) {
-      if (error.name === 'AbortError') {
-        setMessage('Save cancelled');
-      } else {
-        console.error('Error saving PDF:', error);
-        setMessage('Error saving PDF: ' + error.message);
-      }
+  const handlePrint = () => {
+    if (!generatedPdfBytes) return;
+    const blob = new Blob([generatedPdfBytes], { type: 'application/pdf' });
+    const url = URL.createObjectURL(blob);
+    const printWindow = window.open(url, '_blank');
+    if (printWindow) {
+      printWindow.onload = () => {
+        printWindow.focus();
+        printWindow.print();
+      };
     }
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    setMessage(`Invoice ${generatedInvoiceNum} sent to print!`);
   }
 
   const handlePreview = () => {
@@ -324,10 +287,7 @@ export default function App() {
     const blob = new Blob([generatedPdfBytes], { type: 'application/pdf' })
     const url = URL.createObjectURL(blob)
     window.open(url, '_blank')
-    
-    // Clean up the blob URL after a delay
     setTimeout(() => URL.revokeObjectURL(url), 1000)
-    
     setMessage(`Invoice ${generatedInvoiceNum} opened in new tab!`)
   }
 
@@ -470,13 +430,15 @@ export default function App() {
           <div className="form-row" style={{gap:'12px',marginTop:'16px'}}>
             <button 
               className="btn" 
-              onClick={handleSaveAs}
-              style={{flex:1}}
+              onClick={handlePrint}
+              style={{flex:1,background:'linear-gradient(135deg, #43cea2 0%, #185a9d 100%)'}}
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{marginRight:'6px'}}>
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/>
+                <path d="M6 9V2h12v7"/>
+                <rect x="6" y="13" width="12" height="8" rx="2"/>
+                <path d="M6 17h12"/>
               </svg>
-              Save As...
+              Print
             </button>
             <button 
               className="btn" 
