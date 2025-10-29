@@ -266,17 +266,13 @@ export default function App() {
             <h1>Invoice Generator</h1>
             <div className="muted">Create professional invoices instantly</div>
           </div>
-          <label className="field-label" style={{textAlign: 'right', alignItems: 'flex-end'}}>
+          <label className="field-label invoice-number-field">
             Invoice Number
             {isLoadingInvoiceNumber ? (
               <input 
                 disabled 
                 value="Loading..." 
-                className="prefilled"
-                style={{
-                  textAlign: 'right',
-                  maxWidth: '120px'
-                }}
+                className="prefilled invoice-number-input"
               />
             ) : (
               <input 
@@ -288,12 +284,7 @@ export default function App() {
                     setInvoiceNumber(parseInt(value, 10))
                   }
                 }}
-                className="prefilled"
-                style={{
-                  textAlign: 'right',
-                  maxWidth: '120px',
-                  fontWeight: '500'
-                }}
+                className="prefilled invoice-number-input"
                 placeholder="00001"
               />
             )}
