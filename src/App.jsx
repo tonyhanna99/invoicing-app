@@ -172,7 +172,15 @@ export default function App() {
     
     const clientName = customerName.trim()
     const invoiceNum = String(invoiceNumber).padStart(5, '0')
-    
+
+    // Set PDF metadata
+    pdfDoc.setTitle(`invoice-${invoiceNum}`)
+    pdfDoc.setSubject(`Invoice ${invoiceNum} for ${clientName}`)
+    pdfDoc.setAuthor('Trinity Invoicing')
+    pdfDoc.setProducer('pdf-lib')
+    pdfDoc.setCreator('Trinity Invoicing')
+    pdfDoc.setCreationDate(new Date())
+
     // Set all form fields
     setFormField(form, 'client_name', clientName)
     setFormField(form, 'invoice_number', invoiceNum)
@@ -264,21 +272,6 @@ export default function App() {
       setIsLoading(false)
       setLoadingStep('')
     }
-  }
-
-  const handlePrint = () => {
-    if (!generatedPdfBytes) return;
-    const blob = new Blob([generatedPdfBytes], { type: 'application/pdf' });
-    const url = URL.createObjectURL(blob);
-    const printWindow = window.open(url, '_blank');
-    if (printWindow) {
-      printWindow.onload = () => {
-        printWindow.focus();
-        printWindow.print();
-      };
-    }
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
-    setMessage(`Invoice ${generatedInvoiceNum} sent to print!`);
   }
 
   const handlePreview = () => {
@@ -428,18 +421,6 @@ export default function App() {
 
         {generatedPdfBytes && (
           <div className="form-row" style={{gap:'12px',marginTop:'16px'}}>
-            <button 
-              className="btn" 
-              onClick={handlePrint}
-              style={{flex:1,background:'linear-gradient(135deg, #43cea2 0%, #185a9d 100%)'}}
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{marginRight:'6px'}}>
-                <path d="M6 9V2h12v7"/>
-                <rect x="6" y="13" width="12" height="8" rx="2"/>
-                <path d="M6 17h12"/>
-              </svg>
-              Print
-            </button>
             <button 
               className="btn" 
               onClick={handlePreview}
